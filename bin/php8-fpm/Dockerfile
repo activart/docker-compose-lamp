@@ -39,14 +39,33 @@ RUN apt-get clean && apt-get update && apt-get install -y locales
 RUN cp /usr/share/i18n/SUPPORTED /etc/locale.gen
 RUN locale-gen
     
+# Install Apache and necessary dependencies
+RUN apt-get update && apt-get install -y \
+    apache2 \
+    apache2-utils \
+    libxml2-dev \
+    && a2enmod proxy_fcgi setenvif 
+
+# Configure Apache to serve PHP files via PHP-FPM
+RUN { \
+        echo '<FilesMatch \.php$>'; \
+        echo '    SetHandler "proxy:fcgi://127.0.0.1:9000"'; \
+        echo '</FilesMatch>'; \
+    } > /etc/apache2/conf-available/php-fpm.conf \
+    && a2enconf php-fpm
+
+# Configure Apache to run as www-data
+RUN sed -ri -e 's/^export APACHE_RUN_USER=www-data/export APACHE_RUN_USER=www-data/' /etc/apache2/envvars \
+    && sed -ri -e 's/^export APACHE_RUN_GROUP=www-data/export APACHE_RUN_GROUP=www-data/' /etc/apache2/envvars
+
 # Install xdebug
 RUN pecl install xdebug-3.1.4 && \
     docker-php-ext-enable xdebug && \
     mkdir /var/log/xdebug
 
 # Install redis
-#RUN pecl install redis-5.3.3 && \
-#    docker-php-ext-enable redis
+RUN pecl install redis-5.3.3 && \
+    docker-php-ext-enable redis
 
 # Install imagick
 RUN apt-get update && \
@@ -104,3 +123,9 @@ RUN a2enmod rewrite headers
 
 # Cleanup
 RUN rm -rf /usr/src/*
+
+
+EXPOSE 9003    
+
+# Start both Apache and PHP-FPM
+CMD ["sh", "-c", "service apache2 start && php-fpm"]

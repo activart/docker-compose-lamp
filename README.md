@@ -19,6 +19,7 @@ As of now, we have several different PHP versions. Use appropriate php version a
 - 7.3.x
 - 7.4.x
 - 8.0.x
+- 8.0.30-fpm-apache
 - 8.1.x
 - 8.2.x
 - 8.3.x
